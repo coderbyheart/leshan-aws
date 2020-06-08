@@ -1,0 +1,75 @@
+{
+  "name": "@coderbyheart/leshan-aws",
+  "version": "0.0.0-development",
+  "description": "Use Eclipse Leshan as a LwM2M gateway to AWS IoT",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/coderbyheart/leshan-aws.git"
+  },
+  "keywords": [
+    "AWS",
+    "IoT",
+    "Eclipse",
+    "Leshan",
+    "LwM2M",
+    "Gateway"
+  ],
+  "author": "Nordic Semiconductor ASA | nordicsemi.no",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/coderbyheart/leshan-aws/issues"
+  },
+  "homepage": "https://github.com/coderbyheart/leshan-aws#readme",
+  "devDependencies": {
+    "@aws-cdk/aws-ec2": "^1.39.0",
+    "@aws-cdk/aws-ecr": "^1.39.0",
+    "@aws-cdk/aws-ecs": "^1.39.0",
+    "@aws-cdk/aws-iam": "^1.39.0",
+    "@aws-cdk/core": "^1.39.0",
+    "@bifravst/code-style": "^8.0.1",
+    "@commitlint/cli": "^8.3.5",
+    "@commitlint/config-angular": "^8.3.4",
+    "@types/node": "^14.0.1",
+    "aws-cdk": "^1.39.0",
+    "aws-sdk": "^2.691.0",
+    "husky": "^4.2.5",
+    "lint-staged": "^10.2.4",
+    "prettier": "^2.0.5",
+    "semantic-release": "^17.0.7",
+    "typescript": "^3.9.2"
+  },
+  "husky": {
+    "hooks": {
+      "commit-msg": "commitlint -e",
+      "pre-commit": "lint-staged && npx tsc"
+    }
+  },
+  "lint-staged": {
+    "*.{md,json,yaml,yml}": [
+      "prettier --write"
+    ],
+    "*.{ts,tsx}": [
+      "prettier --write",
+      "eslint --ext .js,.ts"
+    ],
+    "*.go": [
+      "gofmt -w",
+      "golint"
+    ]
+  },
+  "release": {
+    "branches": [
+      "saga"
+    ],
+    "remoteTags": true,
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/github"
+    ]
+  }
+}

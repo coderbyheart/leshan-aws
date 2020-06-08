@@ -1,0 +1,81 @@
+name: Deploy
+
+on: push
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  AWS_REGION: eu-central-1
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.client_payload.sha }}
+      - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+
+      - name: Build Docker image
+        run: |
+          TAG=`git tag --contains ${{ github.event.client_payload.sha }} | tr -d '\n'`
+          docker build --build-arg VERSION=${TAG} \
+            -t coderbyheart/leshan-aws:${TAG} .
+
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "14.x"
+
+      - name: Keep npm cache around to speed up installs
+        uses: actions/cache@v1
+        with:
+          path: ~/.npm
+          key: ${{ runner.OS }}-build-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.OS }}-build-${{ env.cache-name }}-
+            ${{ runner.OS }}-build-
+            ${{ runner.OS }}-
+
+      - name: Install dependencies
+        run: npm ci --no-audit
+
+      - name: Compile TypeScript
+        run: npx tsc
+
+      - name: Update the stack itself
+        run: npx cdk deploy --require-approval never
+
+      - name: Cache AWS CLI
+        id: cache-aws-cli-linux
+        uses: actions/cache@v1
+        with:
+          path: aws/
+          key: ${{ runner.OS }}-cache-aws-cli
+
+      - name: Install AWS CLI
+        if: steps.cache-aws-cli-linux.outputs.cache-hit != 'true'
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+
+      - name: Publish the docker image to AWS Elastic Container Registry
+        run: |
+          TAG=`git tag --contains ${{ github.event.client_payload.sha }} | tr -d '\n'`
+          STACK_NAME="${STACK_NAME:-leshan}"
+          ECR_REPOSITORY_NAME=`aws cloudformation describe-stacks --stack-name ${STACK_NAME}-ecr | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "repositoryName") | .OutputValue'`
+          ECR_REPOSITORY_URI=`aws cloudformation describe-stacks --stack-name ${STACK_NAME}-ecr | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "repositoryUri") | .OutputValue'`
+          aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPOSITORY_URI}
+          docker tag coderbyheart/leshan-aws:${TAG} ${ECR_REPOSITORY_URI}:latest
+          docker tag coderbyheart/leshan-aws:${TAG} ${ECR_REPOSITORY_URI}:${TAG}
+          docker push ${ECR_REPOSITORY_URI}:latest
+          docker push ${ECR_REPOSITORY_URI}:${TAG}
+
+      - name: Deploy a new version of the server
+        run: |
+          STACK_NAME="${STACK_NAME:-leshan}"
+          SERVICE_ID=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "fargateServiceArn") | .OutputValue'`
+          CLUSTER_NAME=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "clusterArn") | .OutputValue'`
+          aws ecs update-service --service $SERVICE_ID --cluster $CLUSTER_NAME --force-new-deployment

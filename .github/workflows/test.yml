@@ -1,0 +1,41 @@
+name: Test
+
+on:
+  push:
+
+env:
+  GITHUB_TOKEN: ${{ secrets.USER_GITHUB_TOKEN_FOR_ACTION_TRIGGER }}
+  AWS_BUCKET: ${{ secrets.AWS_BUCKET }}
+  AWS_REGION: eu-central-1
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "14.x"
+      
+      - uses: actions/checkout@v2
+
+      - name: Semantic release
+        id: semantic-release
+        if: endsWith(github.ref, 'saga')
+        continue-on-error: true
+        run: |
+          npx semantic-release
+
+      - name: Trigger Deploy
+        continue-on-error: true
+        if:
+          endsWith(github.ref, 'saga') && steps.semantic-release.conclusion ==
+          'success'
+        uses: octokit/request-action@v2.x
+        with:
+          route: POST /repos/:repository/dispatches
+          repository: ${{ github.repository }}
+          event_type: "deploy-after-release"
+          client_payload: '{"sha": "${{ github.sha }}"}'
