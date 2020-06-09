@@ -3,7 +3,7 @@ WORKDIR /workdir
 RUN apk update && \
     apk upgrade && \
     apk add git openjdk8 maven && \
-    git clone https://github.com/eclipse/leshan.git && \
+    git clone https://github.com/coderbyheart/leshan-aws-gateway.git leshan && \
     cd leshan && \
     mvn clean install
 
