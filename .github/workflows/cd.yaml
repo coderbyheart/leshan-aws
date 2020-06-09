@@ -45,7 +45,7 @@ jobs:
         run: npx tsc
 
       - name: Update the stack itself
-        run: npx cdk deploy --require-approval never
+        run: npx cdk deploy '*' --require-approval never
 
       - name: Cache AWS CLI
         id: cache-aws-cli-linux
@@ -64,9 +64,9 @@ jobs:
       - name: Publish the docker image to AWS Elastic Container Registry
         run: |
           TAG=`git tag --contains ${{ github.event.client_payload.sha }} | tr -d '\n'`
-          STACK_NAME="${STACK_NAME:-leshan}"
-          ECR_REPOSITORY_NAME=`aws cloudformation describe-stacks --stack-name ${STACK_NAME}-ecr | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "repositoryName") | .OutputValue'`
-          ECR_REPOSITORY_URI=`aws cloudformation describe-stacks --stack-name ${STACK_NAME}-ecr | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "repositoryUri") | .OutputValue'`
+          STACK_PREFIX="${STACK_PREFIX:-leshan}"
+          ECR_REPOSITORY_NAME=`aws cloudformation describe-stacks --stack-name ${STACK_PREFIX}-ecr | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "repositoryName") | .OutputValue'`
+          ECR_REPOSITORY_URI=`aws cloudformation describe-stacks --stack-name ${STACK_PREFIX}-ecr | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "repositoryUri") | .OutputValue'`
           aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPOSITORY_URI}
           docker tag coderbyheart/leshan-aws:${TAG} ${ECR_REPOSITORY_URI}:latest
           docker tag coderbyheart/leshan-aws:${TAG} ${ECR_REPOSITORY_URI}:${TAG}
@@ -75,7 +75,7 @@ jobs:
 
       - name: Deploy a new version of the server
         run: |
-          STACK_NAME="${STACK_NAME:-leshan}"
-          SERVICE_ID=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "fargateServiceArn") | .OutputValue'`
-          CLUSTER_NAME=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "clusterArn") | .OutputValue'`
+          STACK_PREFIX="${STACK_PREFIX:-leshan}"
+          SERVICE_ID=`aws cloudformation describe-stacks --stack-name ${STACK_PREFIX} | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "fargateServiceArn") | .OutputValue'`
+          CLUSTER_NAME=`aws cloudformation describe-stacks --stack-name ${STACK_PREFIX} | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "clusterArn") | .OutputValue'`
           aws ecs update-service --service $SERVICE_ID --cluster $CLUSTER_NAME --force-new-deployment

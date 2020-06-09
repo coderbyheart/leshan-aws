@@ -12,7 +12,22 @@ Use [Eclipse Leshan](https://github.com/eclipse/leshan) as a LwM2M gateway to
 ## Running in Docker
 
     docker build -t coderbyheart/leshan-aws .
-    docker run --rm --net=host -P coderbyheart/leshan-aws
+
+Make these environment variable available:
+
+> ℹ️ Linux users can use [direnv](https://direnv.net/) to simplify the process.
+
+    export AWS_REGION=<...>
+    export AWS_QUEUE_URL=<...>
+    export AWS_ACCESS_KEY_ID=<...>
+    export AWS_SECRET_ACCESS_KEY=<...>
+
+    docker run \
+        -e AWS_QUEUE_URL \
+        -e AWS_REGION \
+        -e AWS_ACCESS_KEY_ID \
+        -e AWS_SECRET_ACCESS_KEY \
+        --rm --net=host -P coderbyheart/leshan-aws
 
 ## Deploy to AWS
 
@@ -30,11 +45,11 @@ Install dependencies
 
 Set the ID of the stack
 
-    export STACK_NAME="${STACK_NAME:-leshan}"
+    export STACK_PREFIX="${STACK_PREFIX:-leshan}"
 
 Deploy the ECR stack to an AWS Account
 
-    npx cdk -a 'node dist/cdk-ecr.js' deploy ${STACK_NAME}-ecr
+    npx cdk -a 'node dist/cdk-ecr.js' deploy ${STACK_PREFIX}-ecr
 
 Prepare the account for CDK resources:
 
@@ -42,15 +57,15 @@ Prepare the account for CDK resources:
 
 Publish the docker image to AWS Elastic Container Registry
 
-    ECR_REPOSITORY_NAME=`aws cloudformation describe-stacks --stack-name ${STACK_NAME}-ecr | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "repositoryName") | .OutputValue'`
-    ECR_REPOSITORY_URI=`aws cloudformation describe-stacks --stack-name ${STACK_NAME}-ecr | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "repositoryUri") | .OutputValue'`
+    ECR_REPOSITORY_NAME=`aws cloudformation describe-stacks --stack-name ${STACK_PREFIX}-ecr | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "repositoryName") | .OutputValue'`
+    ECR_REPOSITORY_URI=`aws cloudformation describe-stacks --stack-name ${STACK_PREFIX}-ecr | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "repositoryUri") | .OutputValue'`
     aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPOSITORY_URI}
     docker tag coderbyheart/leshan-aws:latest ${ECR_REPOSITORY_URI}:latest
     docker push ${ECR_REPOSITORY_URI}:latest
 
 Deploy the server stack to an AWS account
 
-    npx cdk deploy $STACK_NAME
+    npx cdk deploy '*'
 
 ## Continuous Deployment
 
@@ -73,6 +88,6 @@ deployment.
 Publish a new version of the image to ECR (see above), then trigger a new
 deployment:
 
-    SERVICE_ID=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "fargateServiceArn") | .OutputValue'`
-    CLUSTER_NAME=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "clusterArn") | .OutputValue'`
+    SERVICE_ID=`aws cloudformation describe-stacks --stack-name ${STACK_PREFIX} | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "fargateServiceArn") | .OutputValue'`
+    CLUSTER_NAME=`aws cloudformation describe-stacks --stack-name ${STACK_PREFIX} | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "clusterArn") | .OutputValue'`
     aws ecs update-service --service $SERVICE_ID --cluster $CLUSTER_NAME --force-new-deployment

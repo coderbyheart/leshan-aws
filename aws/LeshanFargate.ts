@@ -3,6 +3,8 @@ import * as ECR from '@aws-cdk/aws-ecr'
 import * as EC2 from '@aws-cdk/aws-ec2'
 import * as ECS from '@aws-cdk/aws-ecs'
 import * as Logs from '@aws-cdk/aws-logs'
+import * as SQS from '@aws-cdk/aws-sqs'
+import * as IAM from '@aws-cdk/aws-iam'
 
 export class LeshanFargate extends CloudFormation.Resource {
 	public readonly fargateService: ECS.IFargateService
@@ -13,8 +15,12 @@ export class LeshanFargate extends CloudFormation.Resource {
 		id: string,
 		{
 			ecr,
+			userAccessKey,
+			queue,
 		}: {
 			ecr: ECR.IRepository
+			userAccessKey: IAM.CfnAccessKey
+			queue: SQS.IQueue
 		},
 	) {
 		super(parent, id)
@@ -49,6 +55,9 @@ export class LeshanFargate extends CloudFormation.Resource {
 			image: ECS.ContainerImage.fromEcrRepository(ecr),
 			environment: {
 				AWS_REGION: parent.region,
+				AWS_ACCESS_KEY_ID: userAccessKey.ref,
+				AWS_SECRET_ACCESS_KEY: userAccessKey.attrSecretAccessKey,
+				AWS_QUEUE_URL: queue.queueUrl,
 			},
 			cpu: 256,
 			memoryLimitMiB: 512,

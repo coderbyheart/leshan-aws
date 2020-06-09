@@ -1,2 +1,2 @@
-export const stackName = (type?: 'ecr') =>
-	`${process.env.STACK_NAME || 'leshan'}${type ? `-${type}` : ''}`
+export const stackName = (type?: 'ecr' | 'middleware') =>
+	`${process.env.STACK_PREFIX || 'leshan'}${type ? `-${type}` : ''}`

@@ -1,4 +1,4 @@
-import { ServerApp } from './ServerApp'
+import { LeshanAWSApp } from './LeshanAWSApp'
 import { stackName } from './stackName'
 import { CloudFormation } from 'aws-sdk'
 import { Outputs } from './ECRStack'
@@ -20,7 +20,7 @@ const main = async () => {
 		throw new Error(`ECR not found.`)
 	}
 
-	new ServerApp(stackName(), {
+	new LeshanAWSApp({
 		ecrRepositoryArn: ecrRepoArnOutput.OutputValue as string,
 	}).synth()
 }
