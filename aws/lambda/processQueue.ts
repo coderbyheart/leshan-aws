@@ -38,12 +38,8 @@ const e = iot
 		return endpointAddress
 	})
 
-export const handler = async (event: SQSEvent): Promise<void> => {
-	console.log(JSON.stringify({ event }))
-
-	const iotData = new IotData({ endpoint: await e })
-
-	const updates = event.Records.reduce((updates, message) => {
+export const reduceMessages = (event: SQSEvent) =>
+	event.Records.reduce((updates, message) => {
 		const deviceId = (message.attributes as any).MessageGroupId as string
 		const objectId = parseInt(
 			message.messageAttributes.objectId?.stringValue ?? '0',
@@ -72,6 +68,13 @@ export const handler = async (event: SQSEvent): Promise<void> => {
 			},
 		}
 	}, {} as { [key: string]: any })
+
+export const handler = async (event: SQSEvent): Promise<void> => {
+	console.log(JSON.stringify({ event }))
+
+	const iotData = new IotData({ endpoint: await e })
+
+	const updates = reduceMessages(event)
 
 	console.log(JSON.stringify({ updates }))
 

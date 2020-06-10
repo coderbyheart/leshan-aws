@@ -4,7 +4,7 @@
   "description": "Use Eclipse Leshan as a LwM2M gateway to AWS IoT",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -36,13 +36,16 @@
     "@commitlint/cli": "^8.3.5",
     "@commitlint/config-angular": "^8.3.4",
     "@types/aws-lambda": "^8.10.55",
+    "@types/jest": "^26.0.0",
     "@types/node": "^14.0.13",
     "aws-cdk": "^1.45.0",
     "aws-sdk": "^2.693.0",
     "husky": "^4.2.5",
+    "jest": "^26.0.1",
     "lint-staged": "^10.2.4",
     "prettier": "^2.0.5",
     "semantic-release": "^17.0.7",
+    "ts-jest": "^26.1.0",
     "typescript": "^3.9.2"
   },
   "husky": {
@@ -74,5 +77,23 @@
       "@semantic-release/release-notes-generator",
       "@semantic-release/github"
     ]
+  },
+  "jest": {
+    "testURL": "http://localhost",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "json"
+    ],
+    "transform": {
+      "^.+\\.tsx?$": "ts-jest"
+    },
+    "testRegex": ".+\\.spec\\.ts$",
+    "globals": {
+      "ts-jest": {
+        "diagnostics": true
+      }
+    }
   }
 }
