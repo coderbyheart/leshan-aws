@@ -52,6 +52,10 @@ Deploy the ECR stack to an AWS Account
 
     npx cdk -a 'node dist/cdk-ecr.js' deploy ${STACK_PREFIX}-ecr
 
+Deploy the source code stack to an AWS Account
+
+    npx cdk -a 'node dist/cdk-sourcecode.js' deploy
+
 Prepare the account for CDK resources:
 
     npx cdk bootstrap

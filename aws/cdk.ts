@@ -2,6 +2,7 @@ import { LeshanAWSApp } from './LeshanAWSApp'
 import { stackName } from './stackName'
 import { CloudFormation } from 'aws-sdk'
 import { Outputs } from './ECRStack'
+import { prepareResources } from './prepare-resources'
 
 const cf = new CloudFormation()
 
@@ -20,8 +21,13 @@ const main = async () => {
 		throw new Error(`ECR not found.`)
 	}
 
+	const res = await prepareResources({
+		rootDir: process.cwd(),
+	})
+
 	new LeshanAWSApp({
 		ecrRepositoryArn: ecrRepoArnOutput.OutputValue as string,
+		...res,
 	}).synth()
 }
 
