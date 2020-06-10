@@ -19,6 +19,7 @@ const getDevice = (iot: Iot) => {
 							thingName,
 						})
 						.promise()
+					console.log(`${thingName} created.`)
 				}
 			})()
 		return devices[thingName]
@@ -42,43 +43,47 @@ export const handler = async (event: SQSEvent): Promise<void> => {
 
 	const iotData = new IotData({ endpoint: await e })
 
+	const updates = event.Records.reduce((updates, message) => {
+		const deviceId = (message.attributes as any).MessageGroupId as string
+		const objectId = parseInt(
+			message.messageAttributes.objectId?.stringValue ?? '0',
+			10,
+		)
+		const objectInstanceId = parseInt(
+			message.messageAttributes.objectInstanceId?.stringValue ?? '0',
+			10,
+		)
+		const resourceId = parseInt(
+			message.messageAttributes.resourceId?.stringValue ?? '0',
+			10,
+		)
+		const value = parseFloat(
+			message.messageAttributes.Value?.stringValue ?? '0',
+		)
+		return {
+			...updates,
+			[deviceId]: {
+				...updates[deviceId],
+				[objectId]: {
+					[objectInstanceId]: {
+						[resourceId]: value,
+					},
+				},
+			},
+		}
+	}, {} as { [key: string]: any })
+
+	console.log(JSON.stringify({ updates }))
+
 	await Promise.all(
-		event.Records.map(async (message) => {
-			const deviceId = (message.attributes as any).MessageGroupId as string
+		Object.keys(updates).map(async (deviceId) => {
 			await d(deviceId)
-
-			const objectId = parseInt(
-				message.messageAttributes.objectId?.stringValue ?? '0',
-				10,
-			)
-			const objectInstanceId = parseInt(
-				message.messageAttributes.objectInstanceId?.stringValue ?? '0',
-				10,
-			)
-			const resourceId = parseInt(
-				message.messageAttributes.resourceId?.stringValue ?? '0',
-				10,
-			)
-			const value = parseFloat(
-				message.messageAttributes.Value?.stringValue ?? '0',
-			)
-
-			console.log({
-				[deviceId]: `/${objectId}/${objectInstanceId}/${resourceId}: ${value}`,
-			})
-
 			await iotData
 				.updateThingShadow({
 					thingName: deviceId,
 					payload: JSON.stringify({
 						state: {
-							reported: {
-								[objectId]: {
-									[objectInstanceId]: {
-										[resourceId]: value,
-									},
-								},
-							},
+							reported: updates[deviceId],
 						},
 					}),
 				})
