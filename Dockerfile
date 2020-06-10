@@ -7,9 +7,10 @@ RUN apk update && \
 FROM base
 RUN git clone https://github.com/coderbyheart/leshan-aws-gateway.git leshan && \
     cd leshan && \
-    mvn clean install
+    mvn clean install && \
+    git rev-parse HEAD  | tr -d '\n' > .version
 
-CMD java -jar /workdir/leshan/leshan-server-demo/target/leshan-server-demo-*-SNAPSHOT-jar-with-dependencies.jar 
+CMD VERSION=`cat /workdir/leshan/.version` java -jar /workdir/leshan/leshan-server-demo/target/leshan-server-demo-*-SNAPSHOT-jar-with-dependencies.jar 
 
 EXPOSE 5683/udp 5684/udp 5783/udp 5784/udp 8080/tcp 8081/tcp
 

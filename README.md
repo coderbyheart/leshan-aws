@@ -12,7 +12,7 @@ Use [Eclipse Leshan](https://github.com/eclipse/leshan) as a LwM2M gateway to
 
 ## Running in Docker
 
-    docker build -t coderbyheart/leshan-aws .
+    docker build --pull -t coderbyheart/leshan-aws .
 
 Make these environment variable available:
 
