@@ -17,10 +17,12 @@ export class IoTMiddleWareStack extends CloudFormation.Stack {
 			sourceCodeBucketName,
 			baseLayerZipFileName,
 			lambdas,
+			iotEndpoint,
 		}: {
 			sourceCodeBucketName: string
 			baseLayerZipFileName: string
 			lambdas: LayeredLambdas<Lambdas>
+			iotEndpoint: string
 		},
 	) {
 		super(parent, id)
@@ -75,6 +77,9 @@ export class IoTMiddleWareStack extends CloudFormation.Stack {
 					resources: ['*'],
 				}),
 			],
+			environment: {
+				IOT_ENDPOINT: iotEndpoint,
+			},
 		})
 
 		new CloudWatchLogs.LogGroup(this, `processQueueLogGroup`, {

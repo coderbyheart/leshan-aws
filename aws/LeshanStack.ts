@@ -11,9 +11,11 @@ export class LeshanStack extends CloudFormation.Stack {
 		{
 			ecrRepositoryArn,
 			queue,
+			iotEndpoint,
 		}: {
 			ecrRepositoryArn: string
 			queue: SQS.IQueue
+			iotEndpoint: string
 		},
 	) {
 		super(parent, id)
@@ -26,6 +28,12 @@ export class LeshanStack extends CloudFormation.Stack {
 				resources: [queue.queueArn],
 			}),
 		)
+		user.addToPolicy(
+			new IAM.PolicyStatement({
+				actions: ['iot:*'],
+				resources: ['*'],
+			}),
+		)
 
 		const accessKey = new IAM.CfnAccessKey(this, 'userAccessKey', {
 			userName: user.userName,
@@ -36,6 +44,7 @@ export class LeshanStack extends CloudFormation.Stack {
 			ecr: ECR.Repository.fromRepositoryArn(this, 'ecr', ecrRepositoryArn),
 			userAccessKey: accessKey,
 			queue: queue,
+			iotEndpoint,
 		})
 
 		new CloudFormation.CfnOutput(this, 'fargateServiceArn', {

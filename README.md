@@ -20,11 +20,13 @@ Make these environment variable available:
 
     export AWS_REGION=<...>
     export AWS_QUEUE_URL=<...>
+    export AWS_IOT_ENDPOINT=<...>
     export AWS_ACCESS_KEY_ID=<...>
     export AWS_SECRET_ACCESS_KEY=<...>
 
     docker run \
         -e AWS_QUEUE_URL \
+        -e AWS_IOT_ENDPOINT \
         -e AWS_REGION \
         -e AWS_ACCESS_KEY_ID \
         -e AWS_SECRET_ACCESS_KEY \

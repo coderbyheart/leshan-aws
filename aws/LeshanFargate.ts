@@ -17,10 +17,12 @@ export class LeshanFargate extends CloudFormation.Resource {
 			ecr,
 			userAccessKey,
 			queue,
+			iotEndpoint,
 		}: {
 			ecr: ECR.IRepository
 			userAccessKey: IAM.CfnAccessKey
 			queue: SQS.IQueue
+			iotEndpoint: string
 		},
 	) {
 		super(parent, id)
@@ -58,6 +60,7 @@ export class LeshanFargate extends CloudFormation.Resource {
 				AWS_ACCESS_KEY_ID: userAccessKey.ref,
 				AWS_SECRET_ACCESS_KEY: userAccessKey.attrSecretAccessKey,
 				AWS_QUEUE_URL: queue.queueUrl,
+				AWS_IOT_ENDPOINT: iotEndpoint,
 			},
 			cpu: 256,
 			memoryLimitMiB: 512,

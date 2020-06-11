@@ -28,15 +28,7 @@ const getDevice = (iot: Iot) => {
 
 const iot = new Iot()
 const d = getDevice(iot)
-const e = iot
-	.describeEndpoint({ endpointType: 'iot:Data-ATS' })
-	.promise()
-	.then(({ endpointAddress }) => {
-		if (endpointAddress === undefined) {
-			throw new Error(`Failed to resolved AWS IoT endpoint`)
-		}
-		return endpointAddress
-	})
+const e = process.env.IOT_ENDPOINT ?? ''
 
 export const reduceMessages = (event: SQSEvent) =>
 	event.Records.reduce((updates, message) => {
@@ -72,7 +64,7 @@ export const reduceMessages = (event: SQSEvent) =>
 export const handler = async (event: SQSEvent): Promise<void> => {
 	console.log(JSON.stringify({ event }))
 
-	const iotData = new IotData({ endpoint: await e })
+	const iotData = new IotData({ endpoint: e })
 
 	const updates = reduceMessages(event)
 

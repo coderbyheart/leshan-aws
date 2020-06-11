@@ -11,21 +11,25 @@ export class LeshanAWSApp extends App {
 		sourceCodeBucketName,
 		baseLayerZipFileName,
 		lambdas,
+		iotEndpoint,
 	}: {
 		ecrRepositoryArn: string
 		sourceCodeBucketName: string
 		baseLayerZipFileName: string
 		lambdas: LayeredLambdas<Lambdas>
+		iotEndpoint: string
 	}) {
 		super()
 		const mwStack = new IoTMiddleWareStack(this, stackName('middleware'), {
 			sourceCodeBucketName,
 			baseLayerZipFileName,
 			lambdas,
+			iotEndpoint,
 		})
 		new LeshanStack(this, stackName(), {
 			ecrRepositoryArn,
 			queue: mwStack.lwm2mQueue,
+			iotEndpoint,
 		})
 	}
 }

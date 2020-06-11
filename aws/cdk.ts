@@ -1,10 +1,11 @@
 import { LeshanAWSApp } from './LeshanAWSApp'
 import { stackName } from './stackName'
-import { CloudFormation } from 'aws-sdk'
+import { CloudFormation, Iot } from 'aws-sdk'
 import { Outputs } from './ECRStack'
 import { prepareResources } from './prepare-resources'
 
 const cf = new CloudFormation()
+const iot = new Iot()
 
 const main = async () => {
 	const { Stacks } = await cf
@@ -25,9 +26,20 @@ const main = async () => {
 		rootDir: process.cwd(),
 	})
 
+	const iotEndpoint = await iot
+		.describeEndpoint({ endpointType: 'iot:Data-ATS' })
+		.promise()
+		.then(({ endpointAddress }) => {
+			if (endpointAddress === undefined) {
+				throw new Error(`Failed to resolved AWS IoT endpoint`)
+			}
+			return endpointAddress
+		})
+
 	new LeshanAWSApp({
 		ecrRepositoryArn: ecrRepoArnOutput.OutputValue as string,
 		...res,
+		iotEndpoint,
 	}).synth()
 }
 
