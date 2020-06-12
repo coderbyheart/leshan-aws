@@ -98,3 +98,23 @@ deployment:
     SERVICE_ID=`aws cloudformation describe-stacks --stack-name ${STACK_PREFIX} | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "fargateServiceArn") | .OutputValue'`
     CLUSTER_NAME=`aws cloudformation describe-stacks --stack-name ${STACK_PREFIX} | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "clusterArn") | .OutputValue'`
     aws ecs update-service --service $SERVICE_ID --cluster $CLUSTER_NAME --force-new-deployment
+
+## Architecture
+
+## Demo
+
+Below is a recording of turning the LED on the
+[nRF9160 LwM2M client sample](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/samples/nrf9160/lwm2m_client/README.html)
+on and off by setting the respective resource in the AWS IoT shadow:
+
+```json
+"desired": {
+  "3311": {
+    "0": {
+      "5850": true
+    }
+  }
+}
+```
+
+[![Video demo: Turning the LED on the nRF9160 LwM2M client sample on and off](./video.png)](https://www.youtube.com/watch?v=shnSlLcAPbE)
