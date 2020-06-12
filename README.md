@@ -101,7 +101,111 @@ deployment:
 
 ## Architecture
 
-## Demo
+> The scope of this proof-of-concept was to evaluate how to provide AWS IoT
+> features via an LwM2M interface.
+
+[![Overview](./overview.jpg)](https://miro.com/app/board/o9J_kqh0Hfs=/)
+
+This project provides
+[a modified version](https://github.com/coderbyheart/leshan-aws-gateway) of the
+[Eclipse Leshan Demo Server](https://github.com/eclipse/leshan/blob/0facbf9ad5635f79de6b23f319bf4a7468e889ba/leshan-server-demo/src/main/java/org/eclipse/leshan/server/demo/LeshanServerDemo.java)
+which
+[implements LwM2M v1.0.2](https://github.com/eclipse/leshan/wiki/LWM2M-Supported-features)
+in a Docker container running on AWS Fargate. Fargate does not provide IPv6
+support yet, so devices have to connect using IPv4.
+
+> _Note:_ Leshan can be deployed in a
+> [cluster setup](https://github.com/eclipse/leshan/wiki/Using-Leshan-server-in-a-cluster)
+> but this is beyond the scope of this proof-of-concept and a cluster setup
+> would be transparent to the device and the AWS IoT side anyway.
+
+### Security
+
+The security settings are unmodified, so devices can connect to the server
+unencrypted (e.g. with [Wakaama](https://www.eclipse.org/wakaama/)
+`./lwm2mclient -c -4 -h <ip>`), with pre-shared-keys (e.g. with the
+[nRF9160 LwM2M client sample](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/samples/nrf9160/lwm2m_client/README.html)),
+Raw-Public Key or X.509 certificates.
+
+Authentication is handled on the LwM2M server side, and does not involve AWS
+IoT. It does not allow to retrieve private keys of X.509 certificates any way so
+it is not a suitable storage for device credentials. Because the provisioning of
+certificates will differ greatly depending on the use case this step is not
+covered in this proof-of-concept. It is simply assumed that the necessary
+credentials exist when the device connects to the LwM2M server.
+
+### Device → Cloud (`Read`)
+
+LwM2M has the concept of notifications to send data from the device to the
+server, but this needs to be initiated from the server side:
+
+![LwM2M Notifications](./notifications.png)
+
+_LwM2M Notifications.
+([Source](http://www.openmobilealliance.org/release/LightweightM2M/V1_0_2-20180209-A/OMA-TS-LightweightM2M-V1_0_2-20180209-A.pdf))_
+
+Therefore the server needs to create an observation after the device connects
+for the device to start sending e.g. temperature readings to the server.
+
+This has been implemented in the LwM2M server,
+[a list of _well known_ resources is observed after a device connects](https://github.com/coderbyheart/leshan-aws-gateway/blob/aws-bridge/leshan-server-demo/src/main/java/org/eclipse/leshan/server/demo/LeshanServerDemo.java#L540-L545):
+
+```java
+ArrayList<int[]> paths = new ArrayList<int[]>();
+paths.add(new int[]{3, 0, 9}); // Observe battery
+paths.add(new int[]{4, 0, 2}); // Observe radio signal strength
+paths.add(new int[]{3303, 0, 5700}); // Observe temperature
+paths.add(new int[]{3347, 0, 5501}); // Observe button 1 counter
+paths.add(new int[]{3347, 1, 5501}); // Observe button 2 counter
+observe(lwServer, registration, paths);
+```
+
+This means servers need to have _some_ knowledge about the purpose of the
+devices which connect, and which observations to create. However in a typical
+IoT product scenario this is not an issue because it can be determined which
+resources are relevant for the given business case to observe. General purpose
+servers where users can connect arbitrary devices to need to enable those users
+be able to provide a set of resource they whish to observe by default. The
+implemented device write further down provides an example how to solve this
+through the AWS IoT Device Shadow.
+
+After an observation has been successfully created, incoming notifications are
+pushed into an SQS queue. A lambda function subscribes to this queue and creates
+a new AWS IoT Thing if it does not yet exist in order to use its Shadow for
+storing the resource values. The resource value from the notification is stored
+in a nested object:
+
+```json
+{
+  "reported": {
+    "4": {
+      "0": {
+        "2": 80
+      }
+    }
+  }
+}
+```
+
+_Resource /4/0/2 (Connectivity Monitoring - Radio Signal Strength)_
+
+The LwM2M server could directly interact with the shadow, but to separate the
+concerns it has been moved outside of the LwM2M Gateway's scope. After all, it
+is not necessary to use the AWS IoT shadow at all and resource values could be
+stored in a different database or trigger a notification without being
+persisted.
+
+### Cloud → Device (`Write`)
+
+_Writing_ to a LwM2M device happens when the `desired` property is changed in
+the AWS IoT shadow for a specific device. The LwM2M server subscribes to the
+`$aws/things/<device id>/shadow/update/delta` topic when a device connects and
+issues write requests to the device via LwM2M for every incoming delta. It also
+reports the write back to the AWS IoT shadow using MQTT. The LwM2M server is
+effectively in charge of maintaining the correct device state based on the
+device's AWS IoT Shadow state. The implementation in this proof-of-concept
+assumes that all writes are successful and does not handle timeouts, or
+non-existent resources.
 
 Below is a recording of turning the LED on the
 [nRF9160 LwM2M client sample](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/samples/nrf9160/lwm2m_client/README.html)
